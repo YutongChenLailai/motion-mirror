@@ -1,4 +1,5 @@
-Rigged body and body/head material textures: Microsoft Rocketbox, Male Adult 01.
-https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_01
-Converted from FBX to GLB; see assets/Rocketbox-LICENSE.
-The renderer uses three.js r170 (MIT), see assets/three-LICENSE.
+Body, infant morphs, joint locations and skin weights from MakeHuman Community (CC0).
+https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data
+Sources: 3dobjs/base.obj, rigs/default.mhskel, rigs/default_weights.mhw,
+targets/macrodetails/asian-female-baby.target and universal-female-baby-averagemuscle-averageweight.target.
+Renderer uses three.js r170 (MIT), see assets/three-LICENSE.

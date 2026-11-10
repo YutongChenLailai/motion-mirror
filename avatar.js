@@ -1,28 +1,21 @@
 import * as T from './assets/engine.js';
+import {loadInfant} from './infant.js';
 export async function createAvatar(canvas){
   const renderer=new T.WebGLRenderer({canvas,antialias:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   const scene=new T.Scene(), camera=new T.PerspectiveCamera(30,1,.01,20);
   scene.add(new T.HemisphereLight(0xfff7ed,0x797a80,2.4));
   const key=new T.DirectionalLight(0xffeee3,2.1); key.position.set(2,3,4);scene.add(key);
-  const [{scene:model},photo]=await Promise.all([new T.GLTFLoader().loadAsync('assets/body.glb'),new T.TextureLoader().loadAsync('assets/portrait.jpg')]);
+  const [model,photo]=await Promise.all([loadInfant(),new T.TextureLoader().loadAsync('assets/portrait.jpg')]);
   photo.colorSpace=T.SRGBColorSpace;
-  model.scale.setScalar(.01);scene.add(model);model.updateMatrixWorld(true);
+  scene.add(model);model.updateMatrixWorld(true);
   const bones={},rest={},targets={};
   model.traverse(o=>{if(o.isBone){const name=o.name.replace('mixamorig','');bones[name]=o;rest[name]=o.quaternion.clone();targets[name]=o.quaternion.clone();}});
   const pos=b=>b.getWorldPosition(new T.Vector3());
-  const head=pos(bones.Head),height=.22;
-  const [bodyMap,headMap]=await Promise.all(['body','head'].map(async name=>{
-    const map=await new T.TextureLoader().loadAsync('assets/'+name+'.jpg');
-    map.colorSpace=T.SRGBColorSpace;map.flipY=true;return map;
-  }));
+  const head=pos(bones.Head),height=.285;
   model.traverse(mesh=>{
     if(!mesh.isSkinnedMesh)return;
     mesh.frustumCulled=false;
-    const part=mesh.material.name;
-    if(part.includes('opacity')){mesh.visible=false;return;}
-    mesh.material.map=part.includes('body')?bodyMap:headMap;
-    if(part.includes('body'))return;
     const uv=[],attr=mesh.geometry.attributes.position;
     for(let i=0;i<attr.count;i++){
       const p=mesh.localToWorld(mesh.getVertexPosition(i,new T.Vector3()));
@@ -33,17 +26,19 @@ export async function createAvatar(canvas){
       shader.uniforms.babyPhoto={value:photo};
       shader.vertexShader='attribute vec3 portraitCoord; varying vec3 faceCoord;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfaceCoord=portraitCoord;');
       shader.fragmentShader='uniform sampler2D babyPhoto; varying vec3 faceCoord;\n'+shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
-      vec2 uvBaby=vec2(.50+(faceCoord.x-.5)*.75,.045+faceCoord.y*.82);
-      float blend=smoothstep(-.12,-.02,faceCoord.y)*smoothstep(.04,.22,faceCoord.z)*(1.-smoothstep(.44,.56,abs(faceCoord.x-.5)));
+      vec2 uvBaby=vec2(.50+(faceCoord.x-.5)*.75,.21+faceCoord.y*.78);
+      float blend=smoothstep(-.27,-.10,faceCoord.y)*smoothstep(.04,.22,faceCoord.z)*(1.-smoothstep(.44,.56,abs(faceCoord.x-.5)));
       diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(babyPhoto,clamp(uvBaby,0.,1.)).rgb,blend);`);
     };
   });
+  const bindDirections=new Map();
+  for(const [n,b] of Object.entries(bones))bindDirections.set(n,pos(b));
   const dir=new T.Vector3();
   function aim(name,child,delta){
     const bone=bones[name],end=bones[child];
     if(!bone||!end||delta.lengthSq()<.000001)return;
     const local=delta.normalize().applyQuaternion(bone.parent.getWorldQuaternion(new T.Quaternion()).invert());
-    targets[name].setFromUnitVectors(end.position.clone().normalize().applyQuaternion(rest[name]),local).multiply(rest[name]);
+    targets[name].setFromUnitVectors(bindDirections.get(child).clone().sub(bindDirections.get(name)).normalize(),local).multiply(rest[name]);
   }
   const handEffect=new T.Group();scene.add(handEffect);
   for(let i=0;i<8;i++){
