@@ -1,3 +1,4 @@
+import {drawBody} from "./body.js";
 const $ = s => document.querySelector(s);
 const canvas = $('canvas'), ctx = canvas.getContext('2d'), video = $('video');
 const status = $('#status'), start = $('#start'), effect = $('#effect');
@@ -30,6 +31,7 @@ function draw(r) {
   ctx.filter='grayscale(1) sepia(.7) hue-rotate(58deg) saturate(1.25) contrast(1.14)';
   ctx.drawImage(r.image,0,0,w,h);
   ctx.filter='none'; ctx.globalCompositeOperation='source-over';
+  drawBody(ctx,r.poseLandmarks,w,h);
   const face=r.faceLandmarks;
   if (face) triangles.forEach(([a,b,c],i)=>{
     const p=face[a], q=face[b], s=face[c];
