@@ -1,5 +1,18 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Motion Mirror · 动作镜像</title>
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Motion Mirror</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#000;color:#e3f3df;font:15px system-ui,sans-serif}main{height:100svh;display:grid;grid-template-rows:auto 1fr auto}header,footer{padding:clamp(15px,3vw,40px);position:relative}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #233027}h1{font:500 clamp(23px,4vw,44px) Georgia,serif;margin:0;letter-spacing:-.04em}small{color:#a6b6a8}section{position:relative;min-height:0;display:grid;place-items:center}canvas{width:100%;height:100%;object-fit:contain;position:absolute;display:block}video{position:absolute;width:1px;opacity:0}footer{border-top:1px solid #233027}nav{display:flex;gap:8px;flex-wrap:wrap}button,label{font:inherit;color:inherit;background:#111914;border:1px solid #3c4d40;border-radius:30px;padding:10px 19px;cursor:pointer}button:first-child{background:#c9efbb;color:#132010}button:disabled{opacity:.4;cursor:default}button[aria-pressed=true]{border-color:#b5e9a6}p{color:#a7baa8;margin:12px 0 0}input{width:1px;position:absolute;opacity:0}label:focus-within{outline:2px solid white}#intro{text-align:center;font:400 clamp(26px,5vw,58px) Georgia,serif;color:#a6b7a4;z-index:1;pointer-events:none}
-</style><main><header><h1>Motion Mirror</h1><small>实时动作镜像</small></header><section><canvas width="960" height="540"></canvas><div id="intro">载入角色中…</div></section><footer><nav><button id="start">开启摄像头</button><button id="effect" disabled aria-pressed="false">开启掌心光带</button></nav><p id="status" role="status">开启后站入镜头即可驱动角色。现场画面仅供本机追踪。</p></footer></main>
-<script type="module" src="app.js"></script></html>
+*{box-sizing:border-box}body{margin:0;background:black;color:#c9dbcf;font:14px system-ui,sans-serif}
+section{position:relative;height:100svh;display:grid;place-items:center}
+canvas{position:absolute;width:100%;height:100%;display:block}
+#intro{position:relative}#intro:empty::after{content:"";display:block;width:18px;height:18px;border:1px solid #37443b;border-top-color:#bed2c2;border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(1turn)}}
+nav{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:flex;gap:8px}
+button{display:grid;place-items:center;width:44px;height:44px;background:#111712;color:#b5c2b7;border:1px solid #344138;border-radius:50%;cursor:pointer}
+button[aria-pressed=true]{background:#c6dfbf;color:#162319}button:disabled{opacity:.38;cursor:default}button:focus-visible{outline:2px solid white;outline-offset:3px}
+svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+#status:not(.error){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#status.error{position:fixed;bottom:68px;right:16px;left:16px;text-align:right}
+</style><main><section><canvas></canvas><div id="intro" role="status"></div></section>
+<nav aria-label="动作控制">
+<button id="start" disabled aria-label="开启摄像头" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="m16 10 6-3v10l-6-3"/></svg></button>
+<button id="effect" disabled aria-label="开启掌心光带" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-34 12 12)"/><ellipse cx="12" cy="12" rx="5" ry="9" transform="rotate(-34 12 12)"/></svg></button>
+</nav><p id="status" role="status"></p></main><script type="module" src="app.js"></script></html>

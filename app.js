@@ -29,27 +29,27 @@ async function initialize() {
 function stop() {
   active=false; cancelAnimationFrame(frame); stream?.getTracks().forEach(t=>t.stop());
   video.srcObject=null; avatar?.idle();avatar?.setEffect(false);
-  magic=false;effect.disabled=true;effect.textContent='开启掌心光带';effect.setAttribute('aria-pressed','false');
-  start.textContent='开启摄像头'; 
+  magic=false;effect.disabled=true;effect.ariaLabel='开启掌心光带';effect.setAttribute('aria-pressed','false');
+  start.ariaLabel='开启摄像头';start.setAttribute('aria-pressed','false'); 
 }
 async function loop() {
   if(!active)return;
   if(!busy && video.readyState>=2 && video.currentTime!==loop.last){
     loop.last=video.currentTime;busy=true;
-    try {await tracker.send({image:video});} catch {stop();status.textContent='追踪中断，请重新开启摄像头。';} finally {busy=false;}
+    try {await tracker.send({image:video});} catch {stop();status.classList.add('error');status.textContent='追踪中断，请重新开启摄像头。';} finally {busy=false;}
   }
   if(active)frame=requestAnimationFrame(loop);
 }
 start.onclick=async()=>{
   if(active){stop();status.textContent='摄像头已关闭。';return;}
-  start.disabled=true;
+  status.classList.remove('error');start.disabled=true;
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},audio:false});
     video.srcObject=stream;await video.play();status.textContent='首次启动正在加载追踪模型…';
-    await initialize();active=true;$('#intro').hidden=true;start.textContent='关闭摄像头';
+    await initialize();active=true;$('#intro').hidden=true;start.ariaLabel='关闭摄像头';start.setAttribute('aria-pressed','true');
     effect.disabled=false;await loop();
-  }catch(e){stop();status.textContent=e.name==='NotAllowedError'?'请在浏览器的网站设置中允许使用摄像头。':'启动失败，请检查摄像头与网络后重试。';}
+  }catch(e){stop();status.classList.add('error');status.textContent=e.name==='NotAllowedError'?'请在浏览器的网站设置中允许使用摄像头。':'启动失败，请检查摄像头与网络后重试。';}
   finally{start.disabled=false;}
 };
-effect.onclick=()=>{magic=!magic;avatar.setEffect(magic);effect.setAttribute('aria-pressed',String(magic));effect.textContent=magic?'关闭掌心光带':'开启掌心光带';};
+effect.onclick=()=>{magic=!magic;avatar.setEffect(magic);effect.setAttribute('aria-pressed',String(magic));effect.ariaLabel=magic?'关闭掌心光带':'开启掌心光带';};
 window.addEventListener('pagehide',stop);
