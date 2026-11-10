@@ -1,2 +1,4 @@
-Face triangle topology is derived from canonical_face_model.obj, MediaPipe Authors, Apache License 2.0.
-https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj
+Rigged body and body/head material textures: Microsoft Rocketbox, Male Adult 01.
+https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_01
+Converted from FBX to GLB; see assets/Rocketbox-LICENSE.
+The renderer uses three.js r170 (MIT), see assets/three-LICENSE.
