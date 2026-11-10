@@ -34,7 +34,7 @@ function draw(r) {
   if (face) triangles.forEach(([a,b,c],i)=>{
     const p=face[a], q=face[b], s=face[c];
     const cross=(q.x-p.x)*(s.y-p.y)-(q.y-p.y)*(s.x-p.x);
-    if(cross<=0) return;
+    if(cross>=0) return;
     const slope=((q.z-p.z)*(s.y-p.y)-(s.z-p.z)*(q.y-p.y))/cross;
     const light=Math.max(.35,Math.min(1.3,.89+slope*.32));
     const tint=colors?.[i] || [152,192,158];
