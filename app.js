@@ -4,6 +4,7 @@ const canvas = $('canvas'), ctx = canvas.getContext('2d'), video = $('video');
 const status = $('#status'), start = $('#start'), effect = $('#effect');
 const cdn = 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/';
 let tracker, stream, active = false, magic = false, busy = false, colors, triangles;
+let portraitShape, neutralShape;
 let phase = 0, lastRoll, handSide, frame = 0;
 async function initialize() {
   if (tracker) return;
@@ -17,6 +18,30 @@ async function initialize() {
   tracker.setOptions({modelComplexity:1,smoothLandmarks:true,enableSegmentation:true,
     smoothSegmentation:true,refineFaceLandmarks:true,minDetectionConfidence:.55,minTrackingConfidence:.55});
   tracker.onResults(draw);
+}
+// Express shape relative to the eye line so translations, scale and head roll remain live.
+function faceFrame(face,aspect) {
+  const a=face[33], b=face[263];
+  const dx=b.x-a.x, dy=(b.y-a.y)*aspect, span=Math.hypot(dx,dy)||1;
+  return {cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,cz:(a.z+b.z)/2,cos:dx/span,sin:dy/span,span,aspect};
+}
+function normalizedFace(face,f) {
+  return face.map(p=>{
+    const dx=p.x-f.cx,dy=(p.y-f.cy)*f.aspect;
+    return [(dx*f.cos+dy*f.sin)/f.span,(-dx*f.sin+dy*f.cos)/f.span,(p.z-f.cz)/f.span];
+  });
+}
+function portraitFace(face,aspect) {
+  if(!face || !portraitShape)return face;
+  const f=faceFrame(face,aspect);
+  const yaw=Math.abs(face[33].z-face[263].z)/f.span;
+  if(!neutralShape && yaw<.27)neutralShape=normalizedFace(face,f);
+  if(!neutralShape)return face;
+  const weight=Math.max(0,1-yaw);
+  return face.slice(0,468).map((p,i)=>{
+    const [x,y,z]=portraitShape[i].map((v,k)=>Math.max(-.3,Math.min(.3,v-neutralShape[i][k]))*weight*f.span);
+    return {x:p.x+x*f.cos-y*f.sin,y:p.y+(x*f.sin+y*f.cos)/aspect,z:p.z+z};
+  });
 }
 function draw(r) {
   if (!active) return;
@@ -32,7 +57,7 @@ function draw(r) {
   ctx.drawImage(r.image,0,0,w,h);
   ctx.filter='none'; ctx.globalCompositeOperation='source-over';
   drawBody(ctx,r.poseLandmarks,w,h);
-  const face=r.faceLandmarks;
+  const face=portraitFace(r.faceLandmarks,h/w);
   if (face) triangles.forEach(([a,b,c],i)=>{
     const p=face[a], q=face[b], s=face[c];
     const cross=(q.x-p.x)*(s.y-p.y)-(q.y-p.y)*(s.x-p.x);
@@ -104,6 +129,8 @@ $('#photo').onchange=async e=>{
     let found=false;
     still.onResults(r=>{
       if(!r.faceLandmarks)return;
+      portraitShape=normalizedFace(r.faceLandmarks,faceFrame(r.faceLandmarks,sample.height/sample.width));
+      neutralShape=undefined;
       colors=triangles.map(ids=>{
         const points=ids.map(i=>r.faceLandmarks[i]);
         const pixel=(key,size)=>Math.max(0,Math.min(size-1,Math.floor(points.reduce((n,p)=>n+p[key],0)*size/3)));
@@ -111,7 +138,7 @@ $('#photo').onchange=async e=>{
         return Array.from(pixels.slice(offset,offset+3));
       });found=true;
     });
-    await still.send({image:sample});status.textContent=found?'照片已载入，面部网格将使用照片颜色。':'没有检测到脸，请换一张清晰的正面照。';
+    await still.send({image:sample});status.textContent=found?'照片已载入，请正视镜头并保持自然表情以对齐脸型。':'没有检测到脸，请换一张清晰的正面照。';
     if(found)input.parentElement.firstChild.textContent='更换正脸照片';
   }catch{status.textContent='照片处理失败，请尝试清晰的 JPG 或 PNG 正面照。';}
   finally{if(url)URL.revokeObjectURL(url);try{await still?.close();}finally{input.value='';input.disabled=false;start.disabled=false;}}
