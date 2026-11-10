@@ -50,11 +50,18 @@ export async function createAvatar(canvas){
     const ring=new T.Mesh(new T.TorusGeometry(.12+i*.003,.0018,6,80,5.8),new T.MeshBasicMaterial({color:new T.Color().setHSL(.33+i*.012,.85,.68),blending:T.AdditiveBlending}));
     ring.rotation.set(i*.16,i*.24,i*.6);handEffect.add(ring);
   }
-  let side=null,roll=0,magic=false,last=0,seen=0;
+  const rootTarget=new T.Vector3();
+  let anchor=null,side=null,roll=0,magic=false,last=0,seen=0;
+  const restHeadWorld=bones.Head.getWorldQuaternion(new T.Quaternion());
+  const restBodyWorld=bones.Pelvis.getWorldQuaternion(new T.Quaternion());
+  function orient(name,rotation,bind){
+    targets[name].copy(bones[name].parent.getWorldQuaternion(new T.Quaternion()).invert())
+      .multiply(new T.Quaternion().setFromEuler(rotation)).multiply(bind);
+  }
   function idle(){
     for(const name in rest)targets[name].copy(rest[name]);
     for(const [s,sign] of [['Left',1],['Right',-1]])aim(s+'Arm',s+'ForeArm',new T.Vector3(sign*.2,-1,.08));
-    side=null;
+    side=null;anchor=null;rootTarget.set(0,0,0);
   }
   idle();
   for(const name in bones)bones[name].quaternion.copy(targets[name]);
@@ -66,11 +73,21 @@ export async function createAvatar(canvas){
     const ratio=world?1:aspect;
     const move=(name,child,a,b)=>{if(Math.min(a.visibility??1,b.visibility??1)>.5)aim(name,child,vector(a,b,ratio));};
     const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(a.z+b.z)/2,visibility:Math.min(a.visibility??1,b.visibility??1)});
+    const image=r.poseLandmarks;
+    if(Math.min(image[23].visibility??1,image[24].visibility??1)>.6){
+      const center=mid(image[23],image[24]);
+      if(!anchor)anchor=center;
+      rootTarget.set(T.MathUtils.clamp((center.x-anchor.x)*2.5,-.65,.65),T.MathUtils.clamp((anchor.y-center.y)*1.8,-.55,.35),0);
+    }
+    const across=vector(pose[24],pose[23],ratio);
+    if(Math.min(pose[23].visibility??1,pose[24].visibility??1)>.6)
+      orient('Pelvis',new T.Euler(0,-Math.atan2(across.z,across.x),0),restBodyWorld);
     move('Spine','Spine1',mid(pose[23],pose[24]),mid(pose[11],pose[12]));
     const face=r.faceLandmarks;
     if(face){
       const a=face[33],b=face[263],yaw=Math.atan2(a.z-b.z,b.x-a.x),tilt=Math.atan2((a.y-b.y)*aspect,b.x-a.x);
-      targets.Head.copy(rest.Head).multiply(new T.Quaternion().setFromEuler(new T.Euler(0,-yaw,tilt,'YXZ')));
+      const pitch=T.MathUtils.clamp(Math.atan2(face[10].z-face[152].z,(face[152].y-face[10].y)*aspect),-.8,.8);
+      orient('Head',new T.Euler(pitch,-yaw,tilt,'YXZ'),restHeadWorld);
     }
     for(const [s,j] of [['Left',0],['Right',1]]){
       for(const [a,b,i,k] of [['Arm','ForeArm',11,13],['ForeArm','Hand',13,15],['UpLeg','Leg',23,25],['Leg','Foot',25,27],['Foot','ToeBase',27,31]])
@@ -93,6 +110,7 @@ export async function createAvatar(canvas){
   renderer.setAnimationLoop(t=>{
     const alpha=1-Math.exp(-Math.min(.1,(t-last)/1000)*19); last=t;
     if(seen && t-seen>650){idle();seen=0;}
+    model.position.lerp(rootTarget,alpha);
     for(const name in bones)bones[name].quaternion.slerp(targets[name],alpha);
     handEffect.visible=magic&&!!side;
     if(handEffect.visible){bones[side+'HandMiddle1'].getWorldPosition(dir);handEffect.position.copy(dir);handEffect.rotation.set(.4,roll,roll*2+t*.00035);}
