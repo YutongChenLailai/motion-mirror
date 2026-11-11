@@ -33,20 +33,14 @@ export async function createAvatar(canvas){
   });
   const bindDirections=new Map();
   for(const [n,b] of Object.entries(bones))bindDirections.set(n,pos(b));
-  const dir=new T.Vector3();
   function aim(name,child,delta){
     const bone=bones[name],end=bones[child];
     if(!bone||!end||delta.lengthSq()<.000001)return;
     const local=delta.normalize().applyQuaternion(bone.parent.getWorldQuaternion(new T.Quaternion()).invert());
     targets[name].setFromUnitVectors(bindDirections.get(child).clone().sub(bindDirections.get(name)).normalize(),local).multiply(rest[name]);
   }
-  const handEffect=new T.Group();scene.add(handEffect);
-  for(let i=0;i<8;i++){
-    const ring=new T.Mesh(new T.TorusGeometry(.12+i*.003,.0018,6,80,5.8),new T.MeshBasicMaterial({color:new T.Color().setHSL(.33+i*.012,.85,.68),blending:T.AdditiveBlending}));
-    ring.rotation.set(i*.16,i*.24,i*.6);handEffect.add(ring);
-  }
   const rootTarget=new T.Vector3();
-  let anchor=null,side=null,roll=0,magic=false,last=0,seen=0;
+  let anchor=null,last=0,seen=0;
   const restHeadWorld=bones.Head.getWorldQuaternion(new T.Quaternion());
   const restBodyWorld=bones.Pelvis.getWorldQuaternion(new T.Quaternion());
   function orient(name,rotation,bind){
@@ -56,7 +50,7 @@ export async function createAvatar(canvas){
   function idle(){
     for(const name in rest)targets[name].copy(rest[name]);
     for(const [s,sign] of [['Left',1],['Right',-1]])aim(s+'Arm',s+'ForeArm',new T.Vector3(sign*.2,-1,.08));
-    side=null;anchor=null;rootTarget.set(0,0,0);
+    anchor=null;rootTarget.set(0,0,0);
   }
   idle();
   for(const name in bones)bones[name].quaternion.copy(targets[name]);
@@ -95,8 +89,6 @@ export async function createAvatar(canvas){
         });
       }
     }
-    side=r.rightHandLandmarks?'Right':r.leftHandLandmarks?'Left':null;
-    if(side){const h=r.rightHandLandmarks||r.leftHandLandmarks;roll=Math.atan2((h[5].y-h[17].y)*aspect,h[5].x-h[17].x);}
   }
   new ResizeObserver(()=>{
     const {width,height}=canvas.parentElement.getBoundingClientRect();renderer.setSize(width,height,false);
@@ -107,9 +99,7 @@ export async function createAvatar(canvas){
     if(seen && t-seen>650){idle();seen=0;}
     model.position.lerp(rootTarget,alpha);
     for(const name in bones)bones[name].quaternion.slerp(targets[name],alpha);
-    handEffect.visible=magic&&!!side;
-    if(handEffect.visible){bones[side+'HandMiddle1'].getWorldPosition(dir);handEffect.position.copy(dir);handEffect.rotation.set(.4,roll,roll*2+t*.00035);}
     renderer.render(scene,camera);
   });
-  return {track,idle,setEffect:value=>{magic=value;}};
+  return {track,idle};
 }

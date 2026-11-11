@@ -1,9 +1,9 @@
 import {createAvatar} from './avatar.js';
 const $ = s => document.querySelector(s);
 const canvas = $('canvas'), video = document.createElement('video');
-const status = $('#status'), start = $('#start'), effect = $('#effect');
+const status = $('#status'), start = $('#start');
 const cdn = 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/';
-let tracker, stream, active = false, magic = false, busy = false;
+let tracker, stream, active = false, busy = false;
 video.muted=true;video.playsInline=true;
 let avatar;
 start.disabled=true;
@@ -23,13 +23,12 @@ async function initialize() {
   tracker.onResults(r=>{
     if(!active)return;
     avatar.track(r,video.videoHeight/video.videoWidth);
-    status.textContent=r.poseLandmarks?(magic?'移动手掌、转动手腕来控制光带。':'角色追踪中'):'等待人物入镜…';
+    status.textContent=r.poseLandmarks?'角色追踪中':'等待人物入镜…';
   });
 }
 function stop() {
   active=false; cancelAnimationFrame(frame); stream?.getTracks().forEach(t=>t.stop());
-  video.srcObject=null; avatar?.idle();avatar?.setEffect(false);
-  magic=false;effect.disabled=true;effect.ariaLabel='开启掌心光带';effect.setAttribute('aria-pressed','false');
+  video.srcObject=null; avatar?.idle();
   start.ariaLabel='开启摄像头';start.setAttribute('aria-pressed','false'); 
 }
 async function loop() {
@@ -47,9 +46,8 @@ start.onclick=async()=>{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},audio:false});
     video.srcObject=stream;await video.play();status.textContent='首次启动正在加载追踪模型…';
     await initialize();active=true;$('#intro').hidden=true;start.ariaLabel='关闭摄像头';start.setAttribute('aria-pressed','true');
-    effect.disabled=false;await loop();
+    await loop();
   }catch(e){stop();status.classList.add('error');status.textContent=e.name==='NotAllowedError'?'请在浏览器的网站设置中允许使用摄像头。':'启动失败，请检查摄像头与网络后重试。';}
   finally{start.disabled=false;}
 };
-effect.onclick=()=>{magic=!magic;avatar.setEffect(magic);effect.setAttribute('aria-pressed',String(magic));effect.ariaLabel=magic?'关闭掌心光带':'开启掌心光带';};
 window.addEventListener('pagehide',stop);
